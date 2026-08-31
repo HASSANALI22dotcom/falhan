@@ -1,0 +1,274 @@
+# ================================================================
+# public/.htaccess
+# FALHAN EMS - URL REWRITING & SECURITY
+# ================================================================
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # ============================================================
+    # 1. HANDLE AUTHORIZATION HEADER
+    # ============================================================
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+    
+    # ============================================================
+    # 2. REDIRECT TRAILING SLASHES
+    # ============================================================
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+    
+    # ============================================================
+    # 3. SEND REQUESTS TO FRONT CONTROLLER (index.php)
+    # ============================================================
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+    
+    # ============================================================
+    # 4. BLOCK ACCESS TO SENSITIVE FILES
+    # ============================================================
+    RewriteRule ^(app|config|database|storage)/ - [F,L]
+    RewriteRule ^\.env - [F,L]
+    RewriteRule ^composer\.(json|lock) - [F,L]
+    RewriteRule ^package\.json - [F,L]
+</IfModule>
+
+# ================================================================
+# 5. SECURITY HEADERS
+# ================================================================
+<IfModule mod_headers.c>
+    # Prevent MIME type sniffing
+    Header set X-Content-Type-Options "nosniff"
+    
+    # Enable XSS protection
+    Header set X-XSS-Protection "1; mode=block"
+    
+    # Prevent clickjacking
+    Header set X-Frame-Options "SAMEORIGIN"
+    
+    # Referrer policy
+    Header set Referrer-Policy "no-referrer-when-downgrade"
+    
+    # Permissions policy
+    Header set Permissions-Policy "geolocation=(self), microphone=(), camera=()"
+    
+    # HSTS (enable after SSL)
+    # Header set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    
+    # Content Security Policy (CSP) - Adjust as needed
+    # Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:;"
+</IfModule>
+
+# ================================================================
+# 6. BLOCK ACCESS TO SENSITIVE FILES
+# ================================================================
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+<FilesMatch "(\.(env|json|config|yml|xml|log|lock|map)|~)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+<FilesMatch "(^composer\.|^package\.|^yarn\.)">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+<FilesMatch "^(README|LICENSE|CHANGELOG|CONTRIBUTING)">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# ================================================================
+# 7. BLOCK DIRECTORY BROWSING
+# ================================================================
+Options -Indexes
+
+# ================================================================
+# 8. PHP SETTINGS
+# ================================================================
+<IfModule mod_php7.c>
+    # File upload limits
+    php_value upload_max_filesize 20M
+    php_value post_max_size 20M
+    php_value max_file_uploads 20
+    
+    # Execution limits
+    php_value max_execution_time 300
+    php_value max_input_time 300
+    php_value memory_limit 256M
+    
+    # Error handling
+    php_flag display_errors Off
+    php_flag log_errors On
+    php_value error_log ../logs/php_errors.log
+    
+    # Session settings
+    php_value session.cookie_httponly 1
+    php_value session.use_only_cookies 1
+    php_value session.cookie_secure 0  # Set to 1 with SSL
+    
+    # Security
+    php_flag expose_php Off
+</IfModule>
+
+<IfModule mod_php8.c>
+    # File upload limits
+    php_value upload_max_filesize 20M
+    php_value post_max_size 20M
+    php_value max_file_uploads 20
+    
+    # Execution limits
+    php_value max_execution_time 300
+    php_value max_input_time 300
+    php_value memory_limit 256M
+    
+    # Error handling
+    php_flag display_errors Off
+    php_flag log_errors On
+    php_value error_log ../logs/php_errors.log
+    
+    # Session settings
+    php_value session.cookie_httponly 1
+    php_value session.use_only_cookies 1
+    php_value session.cookie_secure 0  # Set to 1 with SSL
+    
+    # Security
+    php_flag expose_php Off
+</IfModule>
+
+# ================================================================
+# 9. GZIP COMPRESSION
+# ================================================================
+<IfModule mod_deflate.c>
+    # Compress HTML, CSS, JavaScript, Text, XML and fonts
+    AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript
+    AddOutputFilterByType DEFLATE application/javascript application/json
+    AddOutputFilterByType DEFLATE application/x-javascript application/xml
+    AddOutputFilterByType DEFLATE application/rss+xml application/atom+xml
+    AddOutputFilterByType DEFLATE image/svg+xml application/font-woff
+    AddOutputFilterByType DEFLATE application/vnd.ms-fontobject application/x-font-ttf
+    AddOutputFilterByType DEFLATE font/opentype font/woff2
+    
+    # Remove browser bugs
+    BrowserMatch ^Mozilla/4 gzip-only-text/html
+    BrowserMatch ^Mozilla/4\.0[678] no-gzip
+    BrowserMatch \bMSIE !no-gzip !gzip-only-text/html
+    Header append Vary User-Agent
+</IfModule>
+
+# ================================================================
+# 10. BROWSER CACHING (Leverage Browser Cache)
+# ================================================================
+<IfModule mod_expires.c>
+    ExpiresActive On
+    
+    # Images
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/jpg "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType image/x-icon "access plus 1 year"
+    ExpiresByType image/ico "access plus 1 year"
+    
+    # CSS & JavaScript
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType text/javascript "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType application/x-javascript "access plus 1 month"
+    
+    # Fonts
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType font/woff2 "access plus 1 year"
+    ExpiresByType application/font-woff "access plus 1 year"
+    ExpiresByType application/vnd.ms-fontobject "access plus 1 year"
+    ExpiresByType application/x-font-ttf "access plus 1 year"
+    ExpiresByType font/opentype "access plus 1 year"
+    
+    # PDF & Docs
+    ExpiresByType application/pdf "access plus 1 month"
+    ExpiresByType application/msword "access plus 1 month"
+    ExpiresByType application/vnd.openxmlformats-officedocument.wordprocessingml.document "access plus 1 month"
+    ExpiresByType application/vnd.ms-excel "access plus 1 month"
+    
+    # Video & Audio
+    ExpiresByType video/mp4 "access plus 1 year"
+    ExpiresByType video/webm "access plus 1 year"
+    ExpiresByType audio/mpeg "access plus 1 year"
+    
+    # HTML
+    ExpiresByType text/html "access plus 0 seconds"
+</IfModule>
+
+# ================================================================
+# 11. CACHE-CONTROL HEADERS
+# ================================================================
+<IfModule mod_headers.c>
+    # Static files (1 year)
+    <FilesMatch "\.(ico|pdf|flv|jpg|jpeg|png|gif|js|css|swf|woff|woff2|ttf|otf|svg|webp|mp4|webm)$">
+        Header set Cache-Control "max-age=31536000, public"
+    </FilesMatch>
+    
+    # HTML (no cache)
+    <FilesMatch "\.(html|htm|php)$">
+        Header set Cache-Control "max-age=0, no-cache, no-store, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires "Thu, 01 Jan 1970 00:00:00 GMT"
+    </FilesMatch>
+</IfModule>
+
+# ================================================================
+# 12. PROTECT LOG FILES
+# ================================================================
+<FilesMatch "\.(log)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# ================================================================
+# 13. PROTECT UPLOADS DIRECTORY
+# ================================================================
+<IfModule mod_rewrite.c>
+    RewriteRule ^uploads/.*\.(php|php[0-9]|phtml|phar)$ - [F,L]
+</IfModule>
+
+# ================================================================
+# 14. CUSTOM ERROR PAGES
+# ================================================================
+# ErrorDocument 403 /errors/403.php
+# ErrorDocument 404 /errors/404.php
+# ErrorDocument 500 /errors/500.php
+
+# ================================================================
+# 15. FORCE HTTPS (Uncomment when SSL is enabled)
+# ================================================================
+# <IfModule mod_rewrite.c>
+#     RewriteCond %{HTTPS} off
+#     RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# </IfModule>
+
+# ================================================================
+# 16. DISABLE SERVER SIGNATURE
+# ================================================================
+ServerSignature Off
+
+# ================================================================
+# 17. SET DEFAULT CHARSET
+# ================================================================
+AddDefaultCharset UTF-8
+
+# ================================================================
+# 18. MULTIVIEWS OFF (Security)
+# ================================================================
+Options -MultiViews
+
+# ================================================================
+# MWISHO WA FAILI
+# ================================================================
